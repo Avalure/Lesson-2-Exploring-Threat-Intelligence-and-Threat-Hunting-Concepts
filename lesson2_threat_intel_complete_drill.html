@@ -1,0 +1,308 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.wrap { padding: 1rem 0; }
+.score-bar { display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.chip { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 8px 14px; font-size: 13px; color: var(--color-text-secondary); }
+.chip span { font-size: 18px; font-weight: 500; color: var(--color-text-primary); display: block; }
+.q-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.topic-tag { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: var(--border-radius-md); margin-bottom: 8px; }
+.tag-a { background: #EEEDFE; color: #3C3489; }
+.tag-b { background: #E1F5EE; color: #085041; }
+.tag-c { background: #FAEEDA; color: #633806; }
+.q-num { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 6px; }
+.q-text { font-size: 15px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 14px; line-height: 1.5; }
+.opts { display: flex; flex-direction: column; gap: 8px; }
+.opt { padding: 9px 14px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; text-align: left; font-size: 14px; color: var(--color-text-primary); cursor: pointer; line-height: 1.4; }
+.opt:hover:not(:disabled) { background: var(--color-background-secondary); }
+.opt.correct { background: #EAF3DE; border-color: #639922; color: #27500A; }
+.opt.wrong { background: #FCEBEB; border-color: #A32D2D; color: #501313; }
+.fb { margin-top: 12px; padding: 10px 14px; border-radius: var(--border-radius-md); font-size: 13px; line-height: 1.55; }
+.fb.ok { background: #EAF3DE; color: #27500A; }
+.fb.bad { background: #FCEBEB; color: #501313; }
+.nav { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
+.nav button { padding: 8px 18px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-primary); cursor: pointer; font-size: 14px; }
+.nav button:disabled { opacity: 0.3; cursor: default; }
+.progress-track { height: 3px; background: var(--color-border-tertiary); border-radius: 2px; margin-bottom: 1.5rem; }
+.progress-fill { height: 3px; background: #7C6FF7; border-radius: 2px; transition: width 0.3s; }
+.end-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 2rem 1.5rem; text-align: center; }
+.end-score { font-size: 48px; font-weight: 500; color: var(--color-text-primary); }
+.end-label { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
+.restart-btn { padding: 10px 24px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-primary); cursor: pointer; font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <div class="score-bar">
+    <div class="chip">Question <span id="q-num">1 / 24</span></div>
+    <div class="chip">Correct <span id="q-correct">0</span></div>
+    <div class="chip">Remaining <span id="q-left">24</span></div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+  <div id="main"></div>
+  <div class="nav">
+    <button id="prev-btn" onclick="go(-1)" disabled>← Prev</button>
+    <button id="next-btn" onclick="go(1)" disabled>Next →</button>
+  </div>
+</div>
+
+<script>
+const ALL = [
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'Which threat actor type is most associated with advanced persistent threats and has government backing?',
+    opts: ['Hacktivist', 'Script Kiddie', 'Nation-State', 'Insider Threat'],
+    ans: 2,
+    exp: 'Nation-states have the resources, funding, and motivation for long-term APT campaigns. Hacktivists are ideologically driven; script kiddies lack skill; insider threats are internal actors misusing access — none sustain APT-level operations like nation-states.'
+  },
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'An employee leaks sensitive company data to a competitor after being passed over for a promotion. Which threat actor category does this person fall under?',
+    opts: ['Hacktivist', 'Organized Crime', 'Nation-State', 'Insider Threat'],
+    ans: 3,
+    exp: 'Insider Threat covers current or former employees, contractors, or partners who misuse authorized access. The danger is they bypass perimeter defenses by design — they already have legitimate credentials and access.'
+  },
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'Which threat actor type is primarily financially motivated and often operates ransomware campaigns at scale?',
+    opts: ['Nation-State', 'Organized Crime', 'Hacktivist', 'Script Kiddie'],
+    ans: 1,
+    exp: 'Organized Crime groups are financially motivated — ransomware, fraud, and data theft are their primary tools. They operate with high sophistication and can be APT-capable. Nation-states have political/strategic motives; hacktivists have ideological ones.'
+  },
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'A group attacks a corporation\'s website to protest its environmental practices, defacing it with political messaging. Which threat actor type is this?',
+    opts: ['Organized Crime', 'Hacktivist', 'Script Kiddie', 'Nation-State'],
+    ans: 1,
+    exp: 'Hacktivists are ideologically or politically motivated — their goal is disruption, publicity, or sending a message, not financial gain. They differ from organized crime (profit-driven) and nation-states (strategic/espionage).'
+  },
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'Which threat actor has the lowest skill level and relies entirely on pre-built exploit tools without understanding how they work?',
+    opts: ['Hacktivist', 'Insider Threat', 'Script Kiddie', 'Supply Chain Attacker'],
+    ans: 2,
+    exp: 'Script Kiddies use pre-built tools and scripts with no understanding of the underlying technology. They are opportunistic, not targeted. Despite low skill, they can still cause real damage using publicly available exploit frameworks.'
+  },
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'A threat actor compromises a third-party software vendor and embeds malware into a legitimate software update, which then gets pushed to thousands of customers. Which threat actor access method does this describe?',
+    opts: ['Insider Threat', 'Supply Chain Access', 'Hacktivist Campaign', 'Script Kiddie Exploit'],
+    ans: 1,
+    exp: 'Supply Chain Access is when attackers compromise a trusted third party (vendor, supplier, software provider) to reach their real targets. The SolarWinds attack is the textbook example — malware was embedded in a legitimate software update distributed to thousands of organizations.'
+  },
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'APTs are characterized by which three defining traits?',
+    opts: ['Fast, loud, and destructive', 'Prolonged, targeted, and stealthy with custom tools', 'Random, opportunistic, and script-based', 'Public, political, and disruptive'],
+    ans: 1,
+    exp: 'APTs are prolonged (long-term campaigns), targeted (specific victim), and stealthy — using custom tools like rootkits and C2 infrastructure to maintain access without detection. Nation-states and organized crime are the primary APT actors.'
+  },
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'Which three tool categories are most associated with APT operations?',
+    opts: ['Nmap, Wireshark, and Metasploit', 'Command and Control, Rootkits, and Custom Crafted Tools', 'Phishing kits, keyloggers, and ransomware', 'Password sprayers, port scanners, and web shells'],
+    ans: 1,
+    exp: 'APT actors use Command and Control (C2) infrastructure to remotely manage compromised systems, rootkits to hide their presence at the OS level, and custom crafted tools built specifically for the target to evade signature-based detection.'
+  },
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'TTPs stands for Tactics, Techniques, and Procedures. What does studying TTPs help a security team do?',
+    opts: ['Patch vulnerabilities faster', 'Identify threat actors and understand their attack methods', 'Configure firewall rules automatically', 'Generate compliance reports'],
+    ans: 1,
+    exp: 'TTPs describe how threat actors behave — their goals (tactics), methods (techniques), and specific implementations (procedures). Studying them lets analysts identify who is attacking, anticipate next steps, and build defenses aligned to real-world attacker behavior.'
+  },
+  {
+    topic: '2A — Threat Actors', tag: 'tag-a',
+    q: 'MITRE ATT&CK organizes adversary behavior across how many attack phases, starting with Reconnaissance?',
+    opts: ['5 phases', '8 phases', '14 phases', '20 phases'],
+    ans: 2,
+    exp: 'The MITRE ATT&CK Enterprise matrix covers 14 tactics (attack phases), from Reconnaissance through Impact. Each tactic contains multiple techniques and sub-techniques. It is the gold standard for threat modeling and TTP documentation.'
+  },
+  {
+    topic: '2B — Active Threats', tag: 'tag-b',
+    q: 'True or False: OSINT refers to using Linux tools to identify potential attackers.',
+    opts: ['True', 'False — OSINT means gathering publicly available information from any source'],
+    ans: 1,
+    exp: 'False. OSINT (Open-Source Intelligence) means collecting publicly available information — DNS records, social media, HTML source code, job postings, document metadata — from any public source. It has nothing to do with Linux specifically.'
+  },
+  {
+    topic: '2B — Active Threats', tag: 'tag-b',
+    q: 'A red teamer checks a target\'s LinkedIn page and finds an employee post mentioning the internal ticketing system they use, the VPN client version, and their office location. Which OSINT category does this represent?',
+    opts: ['DNS enumeration', 'HTML source analysis', 'Social media OSINT', 'Document metadata extraction'],
+    ans: 2,
+    exp: 'Social media (LinkedIn, Facebook, Twitter/X) is a rich OSINT source. Employees often unknowingly reveal sensitive info — internal tools, software versions, physical locations, org structure, and upcoming projects — all without any hacking required.'
+  },
+  {
+    topic: '2B — Active Threats', tag: 'tag-b',
+    q: 'An analyst scans publicly available PDF reports from a target company and discovers employee names, software versions, and internal file paths embedded in the file. Which tool specializes in this?',
+    opts: ['Wireshark', 'FOCA', 'Nmap', 'Burp Suite'],
+    ans: 1,
+    exp: 'FOCA (Fingerprinting Organizations with Collected Archives) finds and extracts metadata from publicly available documents. It surfaces usernames, software names/versions, file paths, and hostnames — all useful for building an attack profile without touching the target.'
+  },
+  {
+    topic: '2B — Active Threats', tag: 'tag-b',
+    q: 'A security team monitors government CERT bulletins, CSIRT reports, and dark web forums to identify threats targeting their own organization. What type of intelligence gathering is this?',
+    opts: ['Closed-Source Intelligence', 'Proprietary threat feeds', 'Defensive OSINT', 'ISAC membership data'],
+    ans: 2,
+    exp: 'Defensive OSINT focuses on using publicly available sources to identify threats aimed at your own organization. Sources include CERT/CSIRT bulletins, government advisories, and dark/deep web monitoring — all publicly or semi-publicly accessible.'
+  },
+  {
+    topic: '2B — Active Threats', tag: 'tag-b',
+    q: 'Which organization type provides cybersecurity threat intelligence specifically for critical infrastructure sectors like energy, finance, and healthcare?',
+    opts: ['CERT', 'CSIRT', 'ISAC', 'CISA'],
+    ans: 2,
+    exp: 'ISACs (Information Sharing and Analysis Centers) are sector-specific organizations that share threat intelligence for critical infrastructure. The DHS identifies 16 critical infrastructure sectors. All US-based ISACs are listed at nationalisacs.org.'
+  },
+  {
+    topic: '2B — Active Threats', tag: 'tag-b',
+    q: 'What type of threat intelligence requires a paid subscription or membership and is not publicly available?',
+    opts: ['Defensive OSINT', 'ISAC bulletins', 'Closed-source intelligence', 'CERT advisories'],
+    ans: 2,
+    exp: 'Closed-source (proprietary) intelligence comes from paid vendor feeds or member-only groups. It is evaluated on three key attributes: Timeliness, Relevancy, and Accuracy. CERT advisories and OSINT are publicly available; ISACs share within member organizations.'
+  },
+  {
+    topic: '2B — Active Threats', tag: 'tag-b',
+    q: 'What are the three attributes used to evaluate the quality of threat intelligence data?',
+    opts: ['Confidentiality, Integrity, Availability', 'Timeliness, Relevancy, Accuracy', 'Volume, Velocity, Variety', 'Source, Method, Format'],
+    ans: 1,
+    exp: 'Good threat intel must be Timely (current enough to act on), Relevant (applicable to your specific environment), and Accurate (verified and correct). If any of the three is weak, the intel may not be actionable or could mislead your response.'
+  },
+  {
+    topic: '2B — Active Threats', tag: 'tag-b',
+    q: 'Which of the following is a stated goal of threat intelligence sharing between organizations?',
+    opts: ['Automating patch deployment across networks', 'Tracking threat actor groups and distributing knowledge about their methods', 'Replacing SIEM platforms with shared log repositories', 'Outsourcing incident response to partner companies'],
+    ans: 1,
+    exp: 'Threat intelligence sharing goals include: identifying IoCs, tracking threat actor groups, documenting findings, discussing response strategies, and distributing knowledge across the community. Sharing makes the whole ecosystem more resilient — one org\'s discovery protects others.'
+  },
+  {
+    topic: '2B — Active Threats', tag: 'tag-b',
+    q: 'An analyst reviews the HTML source of a target company\'s public website and finds server software versions, internal IP addresses, and developer email addresses. Which OSINT category does this represent?',
+    opts: ['Social media OSINT', 'Document metadata (FOCA)', 'HTML source code analysis', 'DNS enumeration'],
+    ans: 2,
+    exp: 'HTML source code is a passive OSINT source — it can reveal web server names, OS versions, internal file paths, developer names and emails, and coding practices. All obtainable without touching internal systems.'
+  },
+  {
+    topic: '2C — Threat Hunting', tag: 'tag-c',
+    q: 'What core mindset distinguishes threat hunting from traditional reactive security monitoring?',
+    opts: ['Patch everything before attackers exploit it', '"Assume breach" — proactively search for threats already inside', 'Block all inbound traffic until verified safe', 'Wait for SIEM alerts before investigating'],
+    ans: 1,
+    exp: '"Assume breach" means operating as if attackers are already inside the network. Threat hunters don\'t wait for alerts — they proactively search for threats that bypassed automated defenses using TTPs, IoCs, and behavioral analysis.'
+  },
+  {
+    topic: '2C — Threat Hunting', tag: 'tag-c',
+    q: 'Which of the following are valid sources of Indicators of Compromise (IoCs)?',
+    opts: ['Only firewall logs and IDS alerts', 'System/application logs, network monitoring software, endpoint protection tools, and SIEM platforms', 'Exclusively dark web threat feeds', 'Vulnerability scan reports and patch management systems'],
+    ans: 1,
+    exp: 'IoC sources include system and application logs, network monitoring software, endpoint protection tools, and SIEM platforms. SIEMs are especially important because they correlate events across all these sources to surface patterns that indicate compromise.'
+  },
+  {
+    topic: '2C — Threat Hunting', tag: 'tag-c',
+    q: 'What is the key difference between an IoC and an IoA?',
+    opts: ['IoCs are more actionable than IoAs in real time', 'IoCs are evidence of a past incident; IoAs indicate an attack currently in progress', 'IoAs require forensic artifacts; IoCs do not', 'There is no meaningful difference between the two'],
+    ans: 1,
+    exp: 'IoC (Indicator of Compromise) = forensic evidence that a breach already occurred — found in logs, SIEM, endpoint tools. IoA (Indicator of Attack) = evidence of an attack happening right now, based on attacker behavior. IoAs give an earlier signal before artifacts are left behind.'
+  },
+  {
+    topic: '2C — Threat Hunting', tag: 'tag-c',
+    q: 'After gaining initial access to a web server, an attacker uses stolen credentials to log into the internal HR system and then the domain controller. What is this progression called?',
+    opts: ['Privilege escalation', 'Lateral movement', 'Defense evasion', 'Exfiltration'],
+    ans: 1,
+    exp: 'Lateral movement is when an attacker pivots from one compromised system to other systems within the same network — expanding access toward higher-value targets. It is distinct from privilege escalation (gaining higher permissions on the same system) and exfiltration (stealing data).'
+  },
+  {
+    topic: '2C — Threat Hunting', tag: 'tag-c',
+    q: 'Which of the following best describes a honeypot in the context of active defense?',
+    opts: ['A vulnerability scanner that probes internal systems', 'A decoy system that lures attackers, provides early warning, and collects intel on their TTPs', 'A SIEM rule that generates alerts on suspicious logins', 'An encrypted vault for storing privileged credentials'],
+    ans: 1,
+    exp: 'A honeypot is a deliberate decoy system. Its three purposes: redirect malicious traffic away from real assets, provide early warning of ongoing attacks, and collect intelligence on attacker behavior and TTPs. Any interaction with a honeypot is inherently suspicious.'
+  }
+];
+
+let questions = [...ALL];
+let current = 0;
+let answered = new Array(questions.length).fill(null);
+let correct = 0;
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function updateHeader() {
+  document.getElementById('q-num').textContent = (current + 1) + ' / ' + questions.length;
+  document.getElementById('q-correct').textContent = correct;
+  document.getElementById('q-left').textContent = questions.length - current;
+  document.getElementById('prog').style.width = Math.round((current / questions.length) * 100) + '%';
+}
+
+function render() {
+  if (current >= questions.length) { showEnd(); return; }
+  updateHeader();
+  const q = questions[current];
+  const prev = answered[current];
+  let html = '<div class="q-card">';
+  html += '<div class="topic-tag ' + q.tag + '">' + q.topic + '</div>';
+  html += '<div class="q-num">Question ' + (current + 1) + ' of ' + questions.length + '</div>';
+  html += '<div class="q-text">' + q.q + '</div><div class="opts">';
+  q.opts.forEach(function(o, i) {
+    let cls = 'opt';
+    if (prev !== null) {
+      if (i === q.ans) cls += ' correct';
+      else if (i === prev) cls += ' wrong';
+    }
+    html += '<button class="' + cls + '" ' + (prev !== null ? 'disabled' : '') + ' onclick="pick(' + i + ')">' + o + '</button>';
+  });
+  html += '</div>';
+  if (prev !== null) {
+    const ok = prev === q.ans;
+    html += '<div class="fb ' + (ok ? 'ok' : 'bad') + '">' + (ok ? '✓ Correct. ' : '✗ Incorrect. ') + q.exp + '</div>';
+  }
+  html += '</div>';
+  document.getElementById('main').innerHTML = html;
+  document.getElementById('prev-btn').disabled = current === 0;
+  document.getElementById('next-btn').disabled = prev === null;
+}
+
+function pick(i) {
+  if (answered[current] !== null) return;
+  answered[current] = i;
+  if (i === questions[current].ans) correct++;
+  document.getElementById('next-btn').disabled = false;
+  render();
+}
+
+function go(dir) {
+  current += dir;
+  if (current >= questions.length) { showEnd(); return; }
+  if (current < 0) current = 0;
+  render();
+}
+
+function showEnd() {
+  document.getElementById('prog').style.width = '100%';
+  document.getElementById('q-left').textContent = '0';
+  const pct = Math.round((correct / questions.length) * 100);
+  const msg = pct === 100 ? 'Perfect score!' : pct >= 80 ? 'Strong work.' : pct >= 60 ? 'Getting there.' : 'Keep drilling.';
+  document.getElementById('main').innerHTML =
+    '<div class="end-card">' +
+    '<div class="end-score">' + correct + '/' + questions.length + '</div>' +
+    '<div class="end-label">' + pct + '% — ' + msg + '</div>' +
+    '<button class="restart-btn" onclick="restart()">Restart with shuffled order</button>' +
+    '</div>';
+  document.getElementById('prev-btn').disabled = true;
+  document.getElementById('next-btn').disabled = true;
+}
+
+function restart() {
+  questions = shuffle([...ALL]);
+  current = 0;
+  answered = new Array(questions.length).fill(null);
+  correct = 0;
+  render();
+}
+
+shuffle(questions);
+render();
+</script>
